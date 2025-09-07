@@ -70,6 +70,9 @@
   .btn.good{ background: linear-gradient(135deg, #16a34a, #22c55e); border:none; color:white; }
   .btn.warn{ background: linear-gradient(135deg, #d97706, #f59e0b); border:none; color:white; }
 
+  select.lang{ appearance:none; border:1px solid #e5e7eb; background:#f9fafb; color:var(--ink); padding:10px 14px; border-radius:12px; font-weight:600; }
+  body.dark select.lang{ background:#334155; border-color:#475569; color:#f3f4f6; }
+
   .wrap{ max-width: 1000px; margin:0 auto; padding: 22px 18px; }
 
   .card{ background: var(--card); border:1px solid #e5e7eb; border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom:22px; transition: transform var(--transition), background var(--transition); }
@@ -85,11 +88,16 @@
   .option:hover{ background:#e0f2fe; transform: translateX(3px); }
   body.dark .option:hover{ background:#475569; }
   .option input{ width:18px; height:18px; accent-color: var(--brand1); }
+  .option.correct{ border-color: var(--ok); background:#ecfdf5; }
+  body.dark .option.correct{ background:#14532d22; }
+  .option.incorrect{ border-color: var(--bad); background:#fef2f2; }
+  body.dark .option.incorrect{ background:#7f1d1d22; }
 
   .speak, .hint-btn{ margin-left:auto; background:none; border:none; cursor:pointer; font-size:20px; color: var(--brand1); transition: transform var(--transition); }
   .speak:hover, .hint-btn:hover { transform: scale(1.15); }
   .hint-text{ display:none; margin-top:10px; padding:12px; background:#f0f9ff; border-left:4px solid var(--brand1); border-radius:8px; font-size:.95em; color: var(--muted); }
   body.dark .hint-text{ background:#334155; color:#d1d5db; }
+  .hint-text.show{ display:block; }
 
   .font-controls{ display:flex; gap:8px; align-items:center; }
   .font-controls .btn { min-width: 42px; text-align:center; }
@@ -108,9 +116,14 @@
   <header>
     <div class="title">
       <img src="https://opiniaobrasilia.com.br/wp-content/uploads/2020/12/RenovaDF.jpeg" alt="Logo Renova DF" class="logo-img"/>
-      <h1>Revisão – Módulo Introdutório <span class="muted">(Preparação para Avaliação)</span></h1>
+      <h1 id="mainTitle">Revisão – Módulo Introdutório <span class="muted" id="subtitle">(Preparação para Avaliação)</span></h1>
     </div>
     <div class="controls">
+      <select class="lang" id="lang">
+        <option value="pt" selected>🇧🇷 Português</option>
+        <option value="en">🇺🇸 English</option>
+        <option value="es">🇪🇸 Español</option>
+      </select>
       <button class="btn primary" id="playAll">🔊 Ler tudo</button>
       <button class="btn" id="stopVoice">⏹️ Parar</button>
       <div class="font-controls">
@@ -118,87 +131,285 @@
         <button class="btn" id="fontMinus">A-</button>
       </div>
       <button class="btn" id="toggleDark">🌙 Dark</button>
+      <button class="btn good" id="showKey">📘 Gabarito</button>
+      <button class="btn warn" id="resetQuiz">↩️ Reiniciar</button>
     </div>
   </header>
 
   <main class="wrap" id="app">
     <section class="card">
-      <h2 class="section-title">Instruções</h2>
-      <p>Você pode ouvir cada pergunta tocando em <strong>🔈</strong> ou clicar na lâmpada 💡 para ler/escutar uma explicação que ajuda na resposta.</p>
+      <h2 class="section-title" id="instTitle">Instruções</h2>
+      <p id="instText">Você pode ouvir cada pergunta tocando em <strong>🔈</strong> ou clicar na lâmpada 💡 para ler/escutar uma explicação que ajuda na resposta.</p>
     </section>
+
+    <section class="card" id="scoreCard">
+      <h2 class="section-title" id="scoreTitle">Pontuação</h2>
+      <p class="score"><span id="scoreText">0</span>/<span id="scoreTotal">0</span></p>
+    </section>
+
     <div id="sections"></div>
   </main>
 
   <button class="scroll-top" id="scrollTop">⬆️</button>
 
 <script>
-const DATA = [
-  { t:"1) Quando conversamos com colegas ou chefes no trabalho, devemos:", a:["Gritar para ser ouvido","Falar de forma clara e respeitosa","Ignorar o que os outros dizem","Contar fofocas"], c:1, hint:"A comunicação deve ser sempre respeitosa e clara." },
-  { t:"2) Antes de escrever qualquer anotação ou relatório de trabalho, é importante:", a:["Escrever qualquer coisa rápido","Conferir os dados e escrever de forma clara","Copiar o que outra pessoa escreveu","Não se preocupar com a escrita"], c:1, hint:"Verificar os dados e escrever de forma clara garante compreensão." },
-  { t:"3) Se você precisa medir o comprimento de uma parede, qual ferramenta você usa?", a:["Martelo","Trena","Chave de fenda","Lixa"], c:1, hint:"A trena é usada para medir comprimentos." },
-  { t:"4) Se uma caixa tem 12 peças e você já usou 5, quantas peças ainda restam?", a:["5","7","12","17"], c:1, hint:"12 menos 5 = 7." },
-  { t:"5) Todo trabalhador tem direito a:", a:["Ficar sem proteção e sem descanso","Equipamentos de proteção e ambiente seguro","Trabalhar sem receber salário","Fazer o que quiser sem regras"], c:1, hint:"A lei garante EPIs e ambiente seguro." },
-  { t:"6) Se você perceber que seu colega está sofrendo algum tipo de injustiça no trabalho, você deve:", a:["Ignorar","Avisar o responsável ou supervisor","Participar do problema","Reclamar apenas com amigos"], c:1, hint:"É correto avisar a liderança responsável." },
-  { t:"7) Se um colega está com dificuldade em uma tarefa, você deve:", a:["Ignorar","Ajudar e orientar com educação","Rir dele","Fazer a tarefa por ele sem ensinar"], c:1, hint:"Ajudar com educação fortalece o trabalho em equipe." },
-  { t:"8) Trabalhar em equipe significa:", a:["Fazer tudo sozinho","Compartilhar tarefas e ajudar os colegas","Deixar os outros fazerem o trabalho","Falar mal dos colegas"], c:1, hint:"Trabalho em equipe envolve colaboração." },
-  { t:"9) Se uma ferramenta quebrar durante o trabalho, você deve:", a:["Continuar usando","Guardar e avisar o responsável","Jogar fora sem avisar","Emprestar para outro colega"], c:1, hint:"Deve-se guardar e comunicar o responsável." },
-  { t:"10) É importante conhecer as tarefas que você deve fazer no trabalho para:", a:["Trabalhar de qualquer jeito","Fazer tudo corretamente e com segurança","Perguntar sempre ao colega ao lado","Não se preocupar com nada"], c:1, hint:"Conhecer suas tarefas ajuda na segurança." },
-  { t:"11) O que devemos fazer com o lixo e restos de materiais no trabalho?", a:["Jogar no chão","Guardar no local correto ou lixo apropriado","Queimar tudo","Ignorar"], c:1, hint:"Sempre descartar no local apropriado." },
-  { t:"12) Economizar água e energia no trabalho é importante para:", a:["Gastar mais","Proteger o meio ambiente e reduzir custos","Não fazer diferença","Tornar o trabalho mais difícil"], c:1, hint:"Economizar preserva o meio ambiente." },
-  { t:"13) Para proteger os olhos ao trabalhar com poeira ou produtos químicos, devemos usar:", a:["Capacete","Óculos de proteção","Luvas","Avental"], c:1, hint:"Óculos de proteção evitam acidentes." },
-  { t:"14) Usar capacete, luvas e calçado adequado é importante porque:", a:["Só serve para parecer profissional","Protege contra acidentes","É obrigatório apenas por formalidade","Não faz diferença"], c:1, hint:"EPIs protegem contra acidentes." },
-  { t:"15) Para organizar informações do trabalho, podemos usar:", a:["Papel e caneta","Planilhas no computador ou celular","Aplicativos de mensagens para anotar dados","Todas as alternativas acima"], c:3, hint:"Todas as alternativas são válidas." },
-  { t:"16) Usar o celular ou computador no trabalho deve ser feito:", a:["Apenas para tarefas do trabalho","Para qualquer coisa, sem limite","Para jogar ou assistir vídeos","Para conversar com amigos sem parar"], c:0, hint:"O uso deve ser apenas para tarefas do trabalho." },
-];
+const I18N = {
+  pt: {
+    htmlLang: 'pt-BR',
+    docTitle: 'Revisão – Módulo Introdutório | Quiz Interativo com Áudio',
+    headerTitle: 'Revisão – Módulo Introdutório',
+    headerSubtitle: '(Preparação para Avaliação)',
+    playAll: '🔊 Ler tudo',
+    stop: '⏹️ Parar',
+    dark: '🌙 Dark',
+    instructions: 'Instruções',
+    instText: 'Você pode ouvir cada pergunta tocando em 🔈 ou clicar na lâmpada 💡 para ler/escutar uma explicação que ajuda na resposta.',
+    keyBtn: '📘 Gabarito',
+    resetBtn: '↩️ Reiniciar',
+    scoreLabel: 'Pontuação',
+    sayIcon: '🔈',
+    hintIcon: '💡',
+    voice: 'pt-BR',
+    data: [
+      { t:"1) Quando conversamos com colegas ou chefes no trabalho, devemos:", a:["Gritar para ser ouvido","Falar de forma clara e respeitosa","Ignorar o que os outros dizem","Contar fofocas"], c:1, hint:"A comunicação deve ser sempre respeitosa e clara." },
+      { t:"2) Antes de escrever qualquer anotação ou relatório de trabalho, é importante:", a:["Escrever qualquer coisa rápido","Conferir os dados e escrever de forma clara","Copiar o que outra pessoa escreveu","Não se preocupar com a escrita"], c:1, hint:"Verificar os dados e escrever de forma clara garante compreensão." },
+      { t:"3) Se você precisa medir o comprimento de uma parede, qual ferramenta você usa?", a:["Martelo","Trena","Chave de fenda","Lixa"], c:1, hint:"A trena é usada para medir comprimentos." },
+      { t:"4) Se uma caixa tem 12 peças e você já usou 5, quantas peças ainda restam?", a:["5","7","12","17"], c:1, hint:"12 menos 5 = 7." },
+      { t:"5) Todo trabalhador tem direito a:", a:["Ficar sem proteção e sem descanso","Equipamentos de proteção e ambiente seguro","Trabalhar sem receber salário","Fazer o que quiser sem regras"], c:1, hint:"A lei garante EPIs e ambiente seguro." },
+      { t:"6) Se você perceber que seu colega está sofrendo algum tipo de injustiça no trabalho, você deve:", a:["Ignorar","Avisar o responsável ou supervisor","Participar do problema","Reclamar apenas com amigos"], c:1, hint:"É correto avisar a liderança responsável." },
+      { t:"7) Se um colega está com dificuldade em uma tarefa, você deve:", a:["Ignorar","Ajudar e orientar com educação","Rir dele","Fazer a tarefa por ele sem ensinar"], c:1, hint:"Ajudar com educação fortalece o trabalho em equipe." },
+      { t:"8) Trabalhar em equipe significa:", a:["Fazer tudo sozinho","Compartilhar tarefas e ajudar os colegas","Deixar os outros fazerem o trabalho","Falar mal dos colegas"], c:1, hint:"Trabalho em equipe envolve colaboração." },
+      { t:"9) Se uma ferramenta quebrar durante o trabalho, você deve:", a:["Continuar usando","Guardar e avisar o responsável","Jogar fora sem avisar","Emprestar para outro colega"], c:1, hint:"Deve-se guardar e comunicar o responsável." },
+      { t:"10) É importante conhecer as tarefas que você deve fazer no trabalho para:", a:["Trabalhar de qualquer jeito","Fazer tudo corretamente e com segurança","Perguntar sempre ao colega ao lado","Não se preocupar com nada"], c:1, hint:"Conhecer suas tarefas ajuda na segurança." },
+      { t:"11) O que devemos fazer com o lixo e restos de materiais no trabalho?", a:["Jogar no chão","Guardar no local correto ou lixo apropriado","Queimar tudo","Ignorar"], c:1, hint:"Sempre descartar no local apropriado." },
+      { t:"12) Economizar água e energia no trabalho é importante para:", a:["Gastar mais","Proteger o meio ambiente e reduzir custos","Não fazer diferença","Tornar o trabalho mais difícil"], c:1, hint:"Economizar preserva o meio ambiente." },
+      { t:"13) Para proteger os olhos ao trabalhar com poeira ou produtos químicos, devemos usar:", a:["Capacete","Óculos de proteção","Luvas","Avental"], c:1, hint:"Óculos de proteção evitam acidentes." },
+      { t:"14) Usar capacete, luvas e calçado adequado é importante porque:", a:["Só serve para parecer profissional","Protege contra acidentes","É obrigatório apenas por formalidade","Não faz diferença"], c:1, hint:"EPIs protegem contra acidentes." },
+      { t:"15) Para organizar informações do trabalho, podemos usar:", a:["Papel e caneta","Planilhas no computador ou celular","Aplicativos de mensagens para anotar dados","Todas as alternativas acima"], c:3, hint:"Todas as alternativas são válidas." },
+      { t:"16) Usar o celular ou computador no trabalho deve ser feito:", a:["Apenas para tarefas do trabalho","Para qualquer coisa, sem limite","Para jogar ou assistir vídeos","Para conversar com amigos sem parar"], c:0, hint:"O uso deve ser apenas para tarefas do trabalho." },
+    ]
+  },
+  en: {
+    htmlLang: 'en',
+    docTitle: 'Review – Introductory Module | Interactive Audio Quiz',
+    headerTitle: 'Review – Introductory Module',
+    headerSubtitle: '(Assessment Prep)',
+    playAll: '🔊 Read all aloud',
+    stop: '⏹️ Stop',
+    dark: '🌙 Dark',
+    instructions: 'Instructions',
+    instText: 'You can listen to each question by tapping 🔈 or click the light bulb 💡 to read/listen to an explanation that helps you answer.',
+    keyBtn: '📘 Answer key',
+    resetBtn: '↩️ Reset',
+    scoreLabel: 'Score',
+    sayIcon: '🔈',
+    hintIcon: '💡',
+    voice: 'en-US',
+    data: [
+      { t:"1) When we talk with coworkers or supervisors at work, we should:", a:["Shout to be heard","Speak clearly and respectfully","Ignore what others say","Spread gossip"], c:1, hint:"Communication should always be respectful and clear." },
+      { t:"2) Before writing any notes or a work report, it is important to:", a:["Write anything quickly","Check the data and write clearly","Copy what someone else wrote","Not worry about writing"], c:1, hint:"Checking data and writing clearly ensures understanding." },
+      { t:"3) If you need to measure the length of a wall, which tool do you use?", a:["Hammer","Tape measure","Screwdriver","Sandpaper"], c:1, hint:"A tape measure is used to measure lengths." },
+      { t:"4) If a box has 12 pieces and you have already used 5, how many are left?", a:["5","7","12","17"], c:1, hint:"12 minus 5 = 7." },
+      { t:"5) Every worker has the right to:", a:["Be without protection or rest","Protective equipment and a safe environment","Work without being paid","Do whatever they want without rules"], c:1, hint:"The law guarantees PPE and a safe environment." },
+      { t:"6) If you notice a coworker is suffering some kind of unfairness at work, you should:", a:["Ignore it","Inform the person in charge or supervisor","Join the problem","Complain only to friends"], c:1, hint:"It is correct to inform responsible leadership." },
+      { t:"7) If a coworker is having difficulty with a task, you should:", a:["Ignore it","Help and guide politely","Laugh at them","Do the task for them without teaching"], c:1, hint:"Helping politely strengthens teamwork." },
+      { t:"8) Working as a team means:", a:["Doing everything alone","Sharing tasks and helping coworkers","Letting others do the work","Speaking badly about coworkers"], c:1, hint:"Teamwork involves collaboration." },
+      { t:"9) If a tool breaks during work, you should:", a:["Keep using it","Store it and inform the person in charge","Throw it away without telling anyone","Lend it to another coworker"], c:1, hint:"You should store it and notify the person in charge." },
+      { t:"10) It is important to know the tasks you must do at work in order to:", a:["Work in any way","Do everything correctly and safely","Always ask the coworker next to you","Not worry about anything"], c:1, hint:"Knowing your tasks helps with safety." },
+      { t:"11) What should we do with trash and leftover materials at work?", a:["Throw them on the floor","Place them in the correct place or proper trash","Burn everything","Ignore it"], c:1, hint:"Always dispose of waste in the proper place." },
+      { t:"12) Saving water and energy at work is important to:", a:["Spend more","Protect the environment and reduce costs","Make no difference","Make work harder"], c:1, hint:"Saving helps preserve the environment." },
+      { t:"13) To protect the eyes when working with dust or chemicals, we should use:", a:["Helmet","Safety goggles","Gloves","Apron"], c:1, hint:"Safety goggles prevent accidents." },
+      { t:"14) Wearing a helmet, gloves, and appropriate footwear is important because:", a:["It only makes us look professional","It protects against accidents","It is mandatory just formally","It makes no difference"], c:1, hint:"PPE protects against accidents." },
+      { t:"15) To organize work information we can use:", a:["Paper and pen","Spreadsheets on the computer or phone","Messaging apps to jot data","All of the above"], c:3, hint:"All alternatives are valid." },
+      { t:"16) Using the phone or computer at work should be:", a:["Only for work tasks","For anything, without limits","To play games or watch videos","To chat with friends nonstop"], c:0, hint:"Use should be only for work tasks." },
+    ]
+  },
+  es: {
+    htmlLang: 'es',
+    docTitle: 'Revisión – Módulo Introductorio | Quiz Interactivo con Audio',
+    headerTitle: 'Revisión – Módulo Introductorio',
+    headerSubtitle: '(Preparación para la Evaluación)',
+    playAll: '🔊 Leer todo',
+    stop: '⏹️ Detener',
+    dark: '🌙 Modo oscuro',
+    instructions: 'Instrucciones',
+    instText: 'Puedes escuchar cada pregunta tocando 🔈 o hacer clic en la bombilla 💡 para leer/escuchar una explicación que ayuda a responder.',
+    keyBtn: '📘 Gabarito',
+    resetBtn: '↩️ Reiniciar',
+    scoreLabel: 'Puntuación',
+    sayIcon: '🔈',
+    hintIcon: '💡',
+    voice: 'es-ES',
+    data: [
+      { t:"1) Cuando hablamos con compañeros o jefes en el trabajo, debemos:", a:["Gritar para ser escuchados","Hablar de forma clara y respetuosa","Ignorar lo que dicen los demás","Contar chismes"], c:1, hint:"La comunicación debe ser siempre respetuosa y clara." },
+      { t:"2) Antes de escribir cualquier anotación o informe de trabajo, es importante:", a:["Escribir cualquier cosa rápido","Verificar los datos y escribir con claridad","Copiar lo que escribió otra persona","No preocuparse por la escritura"], c:1, hint:"Verificar los datos y escribir con claridad garantiza la comprensión." },
+      { t:"3) Si necesitas medir el largo de una pared, ¿qué herramienta usas?", a:["Martillo","Cinta métrica","Destornillador","Lija"], c:1, hint:"La cinta métrica se usa para medir longitudes." },
+      { t:"4) Si una caja tiene 12 piezas y ya usaste 5, ¿cuántas quedan?", a:["5","7","12","17"], c:1, hint:"12 menos 5 = 7." },
+      { t:"5) Todo trabajador tiene derecho a:", a:["Quedarse sin protección y sin descanso","Equipos de protección y ambiente seguro","Trabajar sin recibir salario","Hacer lo que quiera sin reglas"], c:1, hint:"La ley garantiza EPP y un ambiente seguro." },
+      { t:"6) Si notas que un compañero sufre alguna injusticia en el trabajo, debes:", a:["Ignorarlo","Avisar al responsable o supervisor","Sumarte al problema","Quejarte solo con amigos"], c:1, hint:"Es correcto avisar al liderazgo responsable." },
+      { t:"7) Si un compañero tiene dificultad con una tarea, debes:", a:["Ignorarlo","Ayudar y orientar con educación","Reírte de él","Hacer la tarea por él sin enseñar"], c:1, hint:"Ayudar con educación fortalece el trabajo en equipo." },
+      { t:"8) Trabajar en equipo significa:", a:["Hacer todo solo","Compartir tareas y ayudar a los compañeros","Dejar que otros hagan el trabajo","Hablar mal de los compañeros"], c:1, hint:"El trabajo en equipo implica colaboración." },
+      { t:"9) Si una herramienta se rompe durante el trabajo, debes:", a:["Seguir usándola","Guardar y avisar al responsable","Tirarla sin avisar","Prestarla a otro compañero"], c:1, hint:"Se debe guardar y comunicar al responsable." },
+      { t:"10) Es importante conocer las tareas que debes realizar en el trabajo para:", a:["Trabajar de cualquier manera","Hacer todo correctamente y con seguridad","Preguntar siempre al compañero de al lado","No preocuparte por nada"], c:1, hint:"Conocer tus tareas ayuda a la seguridad." },
+      { t:"11) ¿Qué debemos hacer con la basura y los restos de materiales en el trabajo?", a:["Tirarlos al piso","Colocarlos en el lugar correcto o en el contenedor adecuado","Quemarlo todo","Ignorarlo"], c:1, hint:"Siempre desechar en el lugar apropiado." },
+      { t:"12) Ahorrar agua y energía en el trabajo es importante para:", a:["Gastar más","Proteger el medio ambiente y reducir costos","No hacer diferencia","Dificultar el trabajo"], c:1, hint:"Ahorrar preserva el medio ambiente." },
+      { t:"13) Para proteger los ojos al trabajar con polvo o químicos, debemos usar:", a:["Casco","Gafas de protección","Guantes","Delantal"], c:1, hint:"Las gafas de protección previenen accidentes." },
+      { t:"14) Usar casco, guantes y calzado adecuado es importante porque:", a:["Solo sirve para parecer profesional","Protege contra accidentes","Es obligatorio solo por formalidad","No hace diferencia"], c:1, hint:"Los EPP protegen contra accidentes." },
+      { t:"15) Para organizar la información del trabajo podemos usar:", a:["Papel y bolígrafo","Hojas de cálculo en la computadora o celular","Aplicaciones de mensajería para anotar datos","Todas las anteriores"], c:3, hint:"Todas las alternativas son válidas." },
+      { t:"16) El uso del celular o la computadora en el trabajo debe hacerse:", a:["Solo para tareas del trabajo","Para cualquier cosa, sin límite","Para jugar o ver videos","Para conversar con amigos sin parar"], c:0, hint:"El uso debe ser solo para tareas del trabajo." },
+    ]
+  }
+};
+
+let currentLang = 'pt';
+const sec = document.getElementById('sections');
+let userAnswers = [];
+
+function setLang(lang){
+  currentLang = lang;
+  const L = I18N[lang];
+  document.documentElement.lang = L.htmlLang;
+  document.title = L.docTitle;
+  document.getElementById('mainTitle').childNodes[0].nodeValue = L.headerTitle + ' ';
+  document.getElementById('subtitle').textContent = L.headerSubtitle;
+  document.getElementById('playAll').textContent = L.playAll;
+  document.getElementById('stopVoice').textContent = L.stop;
+  document.getElementById('toggleDark').textContent = L.dark;
+  document.getElementById('instTitle').textContent = L.instructions;
+  document.getElementById('instText').innerHTML = L.instText;
+  document.getElementById('showKey').textContent = L.keyBtn;
+  document.getElementById('resetQuiz').textContent = L.resetBtn;
+  document.getElementById('scoreTitle').textContent = L.scoreLabel;
+
+  // rebuild questions
+  sec.innerHTML = '';
+  L.data.forEach((q,idx)=>{
+    const art=document.createElement('article');
+    art.className='card';
+    const opts = q.a.map((x,i)=>`<label class="option"><input type='radio' name='q${idx}' value='${i}'> ${x}</label>`).join('');
+    art.innerHTML=`<p class="question">${q.t}</p>
+      <button class="speak" aria-label="speak" data-say="${q.t} ${q.a.join(', ')}">${L.sayIcon}</button>
+      <button class="hint-btn" aria-label="hint" data-hint="${q.hint}">${L.hintIcon}</button>
+      <div class="options" data-correct="${q.c}">${opts}</div>
+      <div class="hint-text" id="hint${idx}">${q.hint}</div>`;
+    sec.appendChild(art);
+  });
+  bindDynamicHandlers();
+
+  // scoring state
+  userAnswers = Array(L.data.length).fill(-1);
+  document.getElementById('scoreTotal').textContent = L.data.length;
+  updateScore();
+}
 
 function speak(text){
   if(!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
-  u.lang='pt-BR';
+  u.lang = I18N[currentLang].voice;
+  const voices = speechSynthesis.getVoices();
+  const desired = voices.find(v=>v.lang && v.lang.startsWith(I18N[currentLang].voice.split('-')[0]));
+  if(desired) u.voice = desired;
   speechSynthesis.speak(u);
 }
 
-const sec=document.getElementById('sections');
-DATA.forEach((q,idx)=>{
-  const art=document.createElement('article');
-  art.className='card';
-  art.innerHTML=`<p class="question">${q.t}</p>
-  <button class="speak" data-say="${q.t} ${q.a.join(', ')}">🔈</button>
-  <button class="hint-btn" data-hint="${q.hint}">💡</button>
-  <div class="options">${q.a.map((x,i)=>`<label class="option"><input type='radio' name='q${idx}' value='${i}'> ${x}</label>`).join('')}</div>
-  <div class="hint-text" id="hint${idx}">${q.hint}</div>`;
-  sec.appendChild(art);
-});
+function bindDynamicHandlers(){
+  document.querySelectorAll('.speak').forEach(btn=>btn.onclick=()=>speak(btn.dataset.say));
+  document.querySelectorAll('.hint-btn').forEach(btn=>btn.onclick=()=>{
+    const card = btn.closest('article');
+    const name = card.querySelector('input')?.name || 'q0';
+    const idx = name.replace('q','');
+    const t=document.getElementById('hint'+idx);
+    t.classList.toggle('show');
+    if(t.classList.contains('show')) speak(t.textContent);
+  });
+  // answer check
+  document.querySelectorAll('.options').forEach((optGroup, qIdx)=>{
+    const correct = parseInt(optGroup.dataset.correct,10);
+    optGroup.querySelectorAll('input[type="radio"]').forEach(input=>{
+      input.onchange = () => {
+        const val = parseInt(input.value,10);
+        if(userAnswers[qIdx] !== -1) return; // already answered
+        userAnswers[qIdx] = val;
+        // lock all inputs
+        optGroup.querySelectorAll('input').forEach(i=>i.disabled=true);
+        const labels = [...optGroup.querySelectorAll('.option')];
+        labels.forEach(l=>l.classList.remove('correct','incorrect'));
+        labels[correct].classList.add('correct');
+        if(val !== correct){
+          labels[val].classList.add('incorrect');
+        }
+        updateScore();
+      };
+    });
+  });
+}
 
-document.querySelectorAll('.speak').forEach(btn=>btn.onclick=()=>speak(btn.dataset.say));
-document.querySelectorAll('.hint-btn').forEach(btn=>btn.onclick=()=>{
-  const t=document.getElementById('hint'+btn.closest('article').querySelector('input').name.replace('q',''));
-  t.classList.toggle('show');
-  if(t.classList.contains('show')) speak(t.textContent);
-});
+function updateScore(){
+  const got = userAnswers.reduce((s,v,i)=> s + (v===I18N[currentLang].data[i]?.c ? 1 : 0), 0);
+  document.getElementById('scoreText').textContent = got;
+}
+
+// initial render
+setLang('pt');
+
+document.getElementById('lang').addEventListener('change', (e)=> setLang(e.target.value));
 
 document.getElementById('playAll').onclick=()=>{
-  const all=DATA.map(q=>q.t+' '+q.a.join(', ')).join('. ');
+  const L = I18N[currentLang];
+  const all=L.data.map(q=>q.t+' '+q.a.join(', ')).join('. ');
   speak(all);
 }
+
 document.getElementById('stopVoice').onclick=()=>speechSynthesis.cancel();
 
 let fontScale=1;
 function applyFont(){ document.documentElement.style.setProperty('--fontScale', fontScale); }
+
 document.getElementById('fontPlus').onclick=()=>{ fontScale+=0.1; applyFont(); };
 document.getElementById('fontMinus').onclick=()=>{ fontScale=Math.max(0.8, fontScale-0.1); applyFont(); };
 
 const scrollBtn=document.getElementById('scrollTop');
 window.addEventListener('scroll',()=>{
-  if(window.scrollY>200){ scrollBtn.style.display='block'; } else { scrollBtn.style.display='none'; }
+  scrollBtn.style.display = window.scrollY>200 ? 'block' : 'none';
 });
 scrollBtn.onclick=()=> window.scrollTo({top:0,behavior:'smooth'});
 
+// Answer key & reset
+function showAnswerKey(){
+  document.querySelectorAll('.options').forEach((optGroup, qIdx)=>{
+    const correct = parseInt(optGroup.dataset.correct,10);
+    const labels = [...optGroup.querySelectorAll('.option')];
+    labels.forEach(l=>l.classList.remove('correct','incorrect'));
+    labels[correct].classList.add('correct');
+    optGroup.querySelectorAll('input').forEach(i=>{ i.disabled=true; if(parseInt(i.value,10)===correct) i.checked=true; });
+    if(userAnswers[qIdx]===-1) userAnswers[qIdx] = -2; // marked by gabarito
+  });
+  updateScore();
+}
+function resetQuiz(){
+  document.querySelectorAll('.options').forEach((optGroup)=>{
+    optGroup.querySelectorAll('input').forEach(i=>{ i.disabled=false; i.checked=false; });
+    optGroup.querySelectorAll('.option').forEach(l=>l.classList.remove('correct','incorrect'));
+  });
+  userAnswers = Array(I18N[currentLang].data.length).fill(-1);
+  updateScore();
+}
+
+document.getElementById('showKey').onclick = ()=> showAnswerKey();
+document.getElementById('resetQuiz').onclick = ()=> resetQuiz();
+
 // Dark mode toggle
-document.getElementById('toggleDark').onclick=()=>{
+const darkBtn = document.getElementById('toggleDark');
+darkBtn.onclick=()=>{
   document.body.classList.toggle('dark');
 };
+
+// Ensure voices are loaded on some browsers
+if ('speechSynthesis' in window) {
+  speechSynthesis.onvoiceschanged = () => {};
+}
 </script>
 </body>
 </html>
+
