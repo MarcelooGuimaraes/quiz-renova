@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Revisão – Módulo Introdutório | Quiz Interativo com Áudio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: linear-gradient(180deg, #e3f2fd, #fdfdfd);
+    --card: #ffffff;
+    --ink: #111827;
+    --muted: #6b7280;
+    --brand1: #0b5394;
+    --brand2: #22b14c;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --warn: #d97706;
+    --shadow: 0 6px 20px rgba(0,0,0,.08);
+    --radius: 16px;
+    --focus: 0 0 0 3px rgba(11,83,148,.4);
+    --transition: .25s ease;
+    --fontScale: 1;
+  }
+  body.dark{
+    --bg: linear-gradient(180deg, #0f172a, #1e293b);
+    --card: #1e293b;
+    --ink: #f3f4f6;
+    --muted: #9ca3af;
+    --shadow: 0 6px 20px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body{
+    font-family: Inter, system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.6;
+    font-size: calc(16px * var(--fontScale));
+    transition: background var(--transition), color var(--transition);
+  }
+
+  header{
+    position: sticky; top:0; z-index:10;
+    background: var(--brand1); color:white;
+    border-bottom: 3px solid var(--brand2);
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 20px;
+    box-shadow: var(--shadow);
+  }
+  .title{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .logo-img{ height:50px; border-radius:8px; }
+  h1{ font-size: clamp(18px, 3.2vw, 28px); font-weight:800; }
+  .muted { font-weight:400; font-size:.85em; color:#cfe8ff; }
+
+  .controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .btn{
+    border:1px solid #e5e7eb; color:var(--ink); background:#f9fafb;
+    padding:10px 14px; border-radius: 12px; cursor:pointer;
+    transition: transform var(--transition), background var(--transition), box-shadow var(--transition);
+    font-weight:600;
+  }
+  body.dark .btn { background:#334155; border-color:#475569; color:#f3f4f6; }
+  .btn:hover{ background:#e0f2fe; transform: translateY(-1px); box-shadow: var(--shadow); }
+  body.dark .btn:hover{ background:#475569; }
+  .btn.primary{ background: linear-gradient(135deg, var(--brand1), var(--brand2)); border:none; color:white; }
+  .btn.good{ background: linear-gradient(135deg, #16a34a, #22c55e); border:none; color:white; }
+  .btn.warn{ background: linear-gradient(135deg, #d97706, #f59e0b); border:none; color:white; }
+
+  .wrap{ max-width: 1000px; margin:0 auto; padding: 22px 18px; }
+
+  .card{ background: var(--card); border:1px solid #e5e7eb; border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom:22px; transition: transform var(--transition), background var(--transition); }
+  body.dark .card{ border-color:#475569; }
+  .card:hover{ transform: translateY(-2px); }
+
+  .section-title{ font-size: clamp(16px, 2.4vw, 22px); margin-bottom: 12px; color: var(--brand1); font-weight:700; }
+
+  .question{ font-weight:700; margin-bottom: 12px; font-size: 1.05em; }
+  .options{ display:grid; gap:12px; }
+  .option{ display:flex; align-items:center; gap:10px; padding: 12px; border:1px solid #e5e7eb; border-radius: 10px; cursor:pointer; background:#f9fafb; transition: background var(--transition), transform var(--transition); }
+  body.dark .option{ background:#334155; border-color:#475569; }
+  .option:hover{ background:#e0f2fe; transform: translateX(3px); }
+  body.dark .option:hover{ background:#475569; }
+  .option input{ width:18px; height:18px; accent-color: var(--brand1); }
+
+  .speak, .hint-btn{ margin-left:auto; background:none; border:none; cursor:pointer; font-size:20px; color: var(--brand1); transition: transform var(--transition); }
+  .speak:hover, .hint-btn:hover { transform: scale(1.15); }
+  .hint-text{ display:none; margin-top:10px; padding:12px; background:#f0f9ff; border-left:4px solid var(--brand1); border-radius:8px; font-size:.95em; color: var(--muted); }
+  body.dark .hint-text{ background:#334155; color:#d1d5db; }
+
+  .font-controls{ display:flex; gap:8px; align-items:center; }
+  .font-controls .btn { min-width: 42px; text-align:center; }
+
+  .scroll-top{ position:fixed; bottom:20px; right:20px; background:var(--brand1); color:white; border:none; padding:14px; border-radius:50%; cursor:pointer; box-shadow: var(--shadow); font-size:20px; display:none; transition: transform var(--transition), background var(--transition); }
+  .scroll-top:hover{ background: var(--brand2); transform: translateY(-3px); }
+
+  @media (max-width:600px){
+    header{ flex-direction:column; align-items:flex-start; gap:10px; }
+    .controls{ width:100%; justify-content:flex-start; flex-wrap:wrap; }
+    .btn{ flex:1; text-align:center; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <img src="https://opiniaobrasilia.com.br/wp-content/uploads/2020/12/RenovaDF.jpeg" alt="Logo Renova DF" class="logo-img"/>
+      <h1>Revisão – Módulo Introdutório <span class="muted">(Preparação para Avaliação)</span></h1>
+    </div>
+    <div class="controls">
+      <button class="btn primary" id="playAll">🔊 Ler tudo</button>
+      <button class="btn" id="stopVoice">⏹️ Parar</button>
+      <div class="font-controls">
+        <button class="btn" id="fontPlus">A+</button>
+        <button class="btn" id="fontMinus">A-</button>
+      </div>
+      <button class="btn" id="toggleDark">🌙 Dark</button>
+    </div>
+  </header>
+
+  <main class="wrap" id="app">
+    <section class="card">
+      <h2 class="section-title">Instruções</h2>
+      <p>Você pode ouvir cada pergunta tocando em <strong>🔈</strong> ou clicar na lâmpada 💡 para ler/escutar uma explicação que ajuda na resposta.</p>
+    </section>
+    <div id="sections"></div>
+  </main>
+
+  <button class="scroll-top" id="scrollTop">⬆️</button>
+
+<script>
+const DATA = [
+  { t:"1) Quando conversamos com colegas ou chefes no trabalho, devemos:", a:["Gritar para ser ouvido","Falar de forma clara e respeitosa","Ignorar o que os outros dizem","Contar fofocas"], c:1, hint:"A comunicação deve ser sempre respeitosa e clara." },
+  { t:"2) Antes de escrever qualquer anotação ou relatório de trabalho, é importante:", a:["Escrever qualquer coisa rápido","Conferir os dados e escrever de forma clara","Copiar o que outra pessoa escreveu","Não se preocupar com a escrita"], c:1, hint:"Verificar os dados e escrever de forma clara garante compreensão." },
+  { t:"3) Se você precisa medir o comprimento de uma parede, qual ferramenta você usa?", a:["Martelo","Trena","Chave de fenda","Lixa"], c:1, hint:"A trena é usada para medir comprimentos." },
+  { t:"4) Se uma caixa tem 12 peças e você já usou 5, quantas peças ainda restam?", a:["5","7","12","17"], c:1, hint:"12 menos 5 = 7." },
+  { t:"5) Todo trabalhador tem direito a:", a:["Ficar sem proteção e sem descanso","Equipamentos de proteção e ambiente seguro","Trabalhar sem receber salário","Fazer o que quiser sem regras"], c:1, hint:"A lei garante EPIs e ambiente seguro." },
+  { t:"6) Se você perceber que seu colega está sofrendo algum tipo de injustiça no trabalho, você deve:", a:["Ignorar","Avisar o responsável ou supervisor","Participar do problema","Reclamar apenas com amigos"], c:1, hint:"É correto avisar a liderança responsável." },
+  { t:"7) Se um colega está com dificuldade em uma tarefa, você deve:", a:["Ignorar","Ajudar e orientar com educação","Rir dele","Fazer a tarefa por ele sem ensinar"], c:1, hint:"Ajudar com educação fortalece o trabalho em equipe." },
+  { t:"8) Trabalhar em equipe significa:", a:["Fazer tudo sozinho","Compartilhar tarefas e ajudar os colegas","Deixar os outros fazerem o trabalho","Falar mal dos colegas"], c:1, hint:"Trabalho em equipe envolve colaboração." },
+  { t:"9) Se uma ferramenta quebrar durante o trabalho, você deve:", a:["Continuar usando","Guardar e avisar o responsável","Jogar fora sem avisar","Emprestar para outro colega"], c:1, hint:"Deve-se guardar e comunicar o responsável." },
+  { t:"10) É importante conhecer as tarefas que você deve fazer no trabalho para:", a:["Trabalhar de qualquer jeito","Fazer tudo corretamente e com segurança","Perguntar sempre ao colega ao lado","Não se preocupar com nada"], c:1, hint:"Conhecer suas tarefas ajuda na segurança." },
+  { t:"11) O que devemos fazer com o lixo e restos de materiais no trabalho?", a:["Jogar no chão","Guardar no local correto ou lixo apropriado","Queimar tudo","Ignorar"], c:1, hint:"Sempre descartar no local apropriado." },
+  { t:"12) Economizar água e energia no trabalho é importante para:", a:["Gastar mais","Proteger o meio ambiente e reduzir custos","Não fazer diferença","Tornar o trabalho mais difícil"], c:1, hint:"Economizar preserva o meio ambiente." },
+  { t:"13) Para proteger os olhos ao trabalhar com poeira ou produtos químicos, devemos usar:", a:["Capacete","Óculos de proteção","Luvas","Avental"], c:1, hint:"Óculos de proteção evitam acidentes." },
+  { t:"14) Usar capacete, luvas e calçado adequado é importante porque:", a:["Só serve para parecer profissional","Protege contra acidentes","É obrigatório apenas por formalidade","Não faz diferença"], c:1, hint:"EPIs protegem contra acidentes." },
+  { t:"15) Para organizar informações do trabalho, podemos usar:", a:["Papel e caneta","Planilhas no computador ou celular","Aplicativos de mensagens para anotar dados","Todas as alternativas acima"], c:3, hint:"Todas as alternativas são válidas." },
+  { t:"16) Usar o celular ou computador no trabalho deve ser feito:", a:["Apenas para tarefas do trabalho","Para qualquer coisa, sem limite","Para jogar ou assistir vídeos","Para conversar com amigos sem parar"], c:0, hint:"O uso deve ser apenas para tarefas do trabalho." },
+];
+
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='pt-BR';
+  speechSynthesis.speak(u);
+}
+
+const sec=document.getElementById('sections');
+DATA.forEach((q,idx)=>{
+  const art=document.createElement('article');
+  art.className='card';
+  art.innerHTML=`<p class="question">${q.t}</p>
+  <button class="speak" data-say="${q.t} ${q.a.join(', ')}">🔈</button>
+  <button class="hint-btn" data-hint="${q.hint}">💡</button>
+  <div class="options">${q.a.map((x,i)=>`<label class="option"><input type='radio' name='q${idx}' value='${i}'> ${x}</label>`).join('')}</div>
+  <div class="hint-text" id="hint${idx}">${q.hint}</div>`;
+  sec.appendChild(art);
+});
+
+document.querySelectorAll('.speak').forEach(btn=>btn.onclick=()=>speak(btn.dataset.say));
+document.querySelectorAll('.hint-btn').forEach(btn=>btn.onclick=()=>{
+  const t=document.getElementById('hint'+btn.closest('article').querySelector('input').name.replace('q',''));
+  t.classList.toggle('show');
+  if(t.classList.contains('show')) speak(t.textContent);
+});
+
+document.getElementById('playAll').onclick=()=>{
+  const all=DATA.map(q=>q.t+' '+q.a.join(', ')).join('. ');
+  speak(all);
+}
+document.getElementById('stopVoice').onclick=()=>speechSynthesis.cancel();
+
+let fontScale=1;
+function applyFont(){ document.documentElement.style.setProperty('--fontScale', fontScale); }
+document.getElementById('fontPlus').onclick=()=>{ fontScale+=0.1; applyFont(); };
+document.getElementById('fontMinus').onclick=()=>{ fontScale=Math.max(0.8, fontScale-0.1); applyFont(); };
+
+const scrollBtn=document.getElementById('scrollTop');
+window.addEventListener('scroll',()=>{
+  if(window.scrollY>200){ scrollBtn.style.display='block'; } else { scrollBtn.style.display='none'; }
+});
+scrollBtn.onclick=()=> window.scrollTo({top:0,behavior:'smooth'});
+
+// Dark mode toggle
+document.getElementById('toggleDark').onclick=()=>{
+  document.body.classList.toggle('dark');
+};
+</script>
+</body>
+</html>
